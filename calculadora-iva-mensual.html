@@ -211,7 +211,8 @@ h1 span{color:var(--accent2)}
   color:var(--accent);
   font-weight:600;
 }
-.btn-clear-all{
+.btn-clear-all,
+.btn-export{
   padding:0.3rem 0.75rem;
   background:transparent;
   border:1px solid var(--accent2);
@@ -224,7 +225,18 @@ h1 span{color:var(--accent2)}
   border-radius:var(--radius);
   transition:all 0.15s;
 }
-.btn-clear-all:hover{background:var(--accent2);color:#fff}
+.btn-clear-all:hover,
+.btn-export:hover{
+  background:var(--accent2);
+  color:#fff
+}
+.btn-export{
+  border-color:var(--green);
+  color:var(--green);
+}
+.btn-export:hover{
+  background:var(--green);
+}
 
 /* Table scroll wrapper */
 .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -403,7 +415,10 @@ tfoot td.t-tax{color:#f4a87a}
         <div class="table-title" id="tableTitle">Registros del mes</div>
         <div class="record-count" id="recordCount">0 registros</div>
       </div>
-      <button class="btn-clear-all" onclick="clearAll()">🗑 Limpiar todo</button>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn-export" onclick="exportToExcel()" title="Exportar CSV">📊 Exportar CSV</button>
+        <button class="btn-clear-all" onclick="clearAll()">🗑 Limpiar todo</button>
+      </div>
     </div>
     <div class="table-scroll">
       <table id="mainTable">
@@ -628,6 +643,71 @@ function showToast(msg){
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+// ── EXPORT TO EXCEL ──
+function exportToExcel(){
+  const month = document.getElementById('monthPicker').value || currentMonth;
+  const rows = entries[month] || [];
+  
+  if(rows.length === 0){
+    showToast('No hay registros para exportar');
+    return;
+  }
+  
+  const rate = getRate();
+  const monthName = fmtMonth(month);
+  const filename = `Registros_IVA_${month}.csv`;
+  
+  const csvData = [
+    ['Registro de IVA - ' + monthName],
+    ['Tasa IVA: ' + rate + '%'],
+    [],
+    ['Fecha', 'Total con IVA', 'Neto sin IVA', 'IVA'],
+  ];
+  
+  rows.forEach(r => {
+    csvData.push([
+      r.date,
+      r.amount,
+      r.net,
+      r.tax
+    ]);
+  });
+  
+  const totAmount = rows.reduce((s,r)=>s+r.amount,0);
+  const totNet    = rows.reduce((s,r)=>s+r.net,0);
+  const totTax    = rows.reduce((s,r)=>s+r.tax,0);
+  
+  csvData.push([]);
+  csvData.push([
+    'TOTAL',
+    totAmount,
+    totNet,
+    totTax
+  ]);
+  
+  exportToCsv(csvData, filename);
+}
+
+function exportToCsv(data, filename){
+  const csv = data.map(row => row.map(cell => {
+    if(cell === null || cell === undefined) return '';
+    const value = String(cell).replace(/"/g, '""');
+    return `"${value}"`;
+  }).join(',')).join('\r\n');
+  
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  showToast('✓ Descargado en CSV');
 }
 
 init();
