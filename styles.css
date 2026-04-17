@@ -89,6 +89,7 @@ h1 span{color:var(--accent2)}
   border-radius:var(--radius);
   transition:border-color 0.15s;
   -webkit-appearance:none;
+  appearance:none;
 }
 .config-field select:focus,
 .config-field input:focus{border-color:var(--accent);}
